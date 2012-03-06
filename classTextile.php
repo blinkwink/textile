@@ -1362,6 +1362,32 @@ class Textile
 		return (in_array($name, $mask) && isset( $parts[$name]) && '' !== $parts[$name]);
 	}
 
+// -------------------------------------------------------------
+	function balancedParens( $str, $open_str = '(', $close_str = ')' )
+	{
+		$open = 0;
+		if( is_string ($str) && '' !== $str ) {
+			$pos  = 0;
+			$len  = mb_strlen( $str );
+			while( $pos < $len ) {
+				$char = mb_substr( $str, $pos++, 1 );
+				if( $char === $open_str )
+					$open++;
+				elseif( $char === $close_str )
+					$open--;
+
+				if( $open < 0 )
+					return false;
+			}
+		}
+
+		return ($open === 0);
+	}
+
+	function hasOpenParen( $str )
+	{
+		return (false !== mb_strpos( $str, '(' ) );
+	}
 
 // -------------------------------------------------------------
 	/**
@@ -1420,7 +1446,7 @@ class Textile
 			('.$this->urlch.'+?)   # $url
 			(\/)?                  # $slash
 			([^'.$this->regex_snippets['wrd'].'\/;]*?)  # $post
-			([\]}]|(?=\s|$|\)))	   # $tail
+			([\]}\)]|(?=\s|$|\)))  # $tail
 			/x'.$this->regex_snippets['mod'], array(&$this, "fLink"), $text);
 	}
 
@@ -1431,6 +1457,12 @@ class Textile
 
 		$uri_parts = array();
 		$this->parseURI( $url, $uri_parts );
+
+		if( $tail === ')' && $this->hasOpenParen( $uri_parts['path']) && !$this->balancedParens( $uri_parts['path'] ) ) {
+			$tail = '';
+			$uri_parts['path'] .= ')' . $slash;
+			$url .= ')' . $slash;
+		}
 
 		$scheme         = $uri_parts['scheme'];
 		$scheme_in_list = in_array( $scheme, $this->url_schemes );
